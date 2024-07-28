@@ -107,6 +107,14 @@ struct CL{
 
     std::vector<cl_kernel>   kernels;
 
+    CL(const char* path, std::vector<const char*> kernels){
+        init(path, kernels);
+    }
+
+    ~CL(){
+        free();
+    }
+
     void free(){
         clReleaseCommandQueue(command_queue);
         clReleaseContext(context);
@@ -155,12 +163,12 @@ struct CL{
         cl_print_err("Context creation:\t", status);
 
         // Enable profiling setting, this is incompatible with out of order 
-        cl_queue_properties prop[] = 
-            { CL_QUEUE_PROPERTIES, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, 0 };
+        // cl_queue_properties prop[] = 
+        //     { CL_QUEUE_PROPERTIES, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, 0 };
             
         // Create a command buffer with out of order execution
-        command_queue = clCreateCommandQueueWithProperties(
-            context, devices[0], prop, &status);
+        command_queue = clCreateCommandQueue(
+            context, devices[0], CL_QUEUE_PROFILING_ENABLE, &status);
         cl_print_err("Command queue creation:\t", status);
 
         // Load kernel code from file
@@ -259,6 +267,14 @@ struct CL{
     void set_arg(int kernel, int index, size_t size, const void* arg){
         cl_int status = clSetKernelArg(kernels[kernel], index, size, arg);
         cl_print_err("Set arg:\t", status);
+    }
+
+    void set_arg_int(int kernel, int index, int arg){
+        set_arg(kernel, index, sizeof(int), &arg);
+    }
+
+    void set_arg_clmem(int kernel, int index, cl_mem arg){
+        set_arg(kernel, index, sizeof(cl_mem), &arg);
     }
 };
 
