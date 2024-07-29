@@ -166,12 +166,12 @@ struct CL{
         cl_print_err("Context creation:\t", status);
 
         // Enable profiling setting, this is incompatible with out of order 
-        // cl_queue_properties prop[] = 
-        //     { CL_QUEUE_PROPERTIES, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, 0 };
+        cl_queue_properties prop[] = 
+            { CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0 };
             
         // Create a command buffer with out of order execution
-        command_queue = clCreateCommandQueue(
-            context, devices[0], CL_QUEUE_PROFILING_ENABLE, &status);
+        command_queue = clCreateCommandQueueWithProperties(
+            context, devices[0], prop, &status);
         cl_print_err("Command queue creation:\t", status);
 
         // Load kernel code from file
@@ -196,7 +196,7 @@ struct CL{
             program, 1, devices, options, NULL, NULL);
         cl_print_err("Program build:\t\t", status);
 
-        if (status != CL_SUCCESS){
+        //if (status != CL_SUCCESS){
             size_t logsize;
             clGetProgramBuildInfo(program, devices[0], 
             CL_PROGRAM_BUILD_LOG, 0, nullptr, &logsize);
@@ -207,7 +207,7 @@ struct CL{
             
             std::cout << plog;
             delete[] plog;
-        }
+        //}
 
         char buffer[128];
         for (const char* kernel : kernels){

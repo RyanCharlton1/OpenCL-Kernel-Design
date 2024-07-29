@@ -2,13 +2,13 @@
 
 #include <string>
 
-#define COUNT     1
-#define BATCHSIZE 1
+#define COUNT     100
+#define BATCHSIZE 5
 
-#define WIDTH    5
-#define HEIGHT   5
+#define WIDTH    128
+#define HEIGHT   128
 #define CHANNELS 3
-#define FEATURES 4
+#define FEATURES 64
 
 #define FILTERWIDTH  5
 #define FILTERHEIGHT 5
@@ -34,8 +34,12 @@ void rand_array(float *arr, int size){
 }
 
 int main(){
-    char options[128] = "-DFILTERW=%d -DFILTERH=%d -DCHANNELS=%d";
-    std::snprintf(options, 128, options, FILTERWIDTH, FILTERHEIGHT, CHANNELS);
+    char options[128];
+    // std::snprintf(options, 128, "-DFILTERW=%d -DFILTERH=%d -DCHANNELS=%d", 
+    //     FILTERWIDTH, FILTERHEIGHT, CHANNELS);
+
+    std::snprintf(options, 128, "-DFILTERW=%d -DFILTERH=%d -DCHANNELS=%d -DBSIZE=%d -DPREVW=%d -DPREVH=%d -DSTRIDEX=%d -DSTRIDEY=%d",
+        FILTERWIDTH, FILTERHEIGHT, CHANNELS, BATCHSIZE, WIDTH, HEIGHT, STRIDEX, STRIDEY);
 
     CL cl("conv.cl", options, { "convolution", "convolution_opt" });
 
@@ -62,35 +66,32 @@ int main(){
         CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR);
 
     // Original, unoptimised kernel args
-    // cl.set_arg_int(0, 0, WIDTH);
-    // cl.set_arg_int(0, 1, HEIGHT);
-    // cl.set_arg_int(0, 2, masks(HEIGHT, FILTERHEIGHT, STRIDEY));
-    // cl.set_arg_int(0, 3, FILTERWIDTH);
-    // cl.set_arg_int(0, 4, FILTERHEIGHT);
-    // cl.set_arg_int(0, 5, CHANNELS);
-    // cl.set_arg_int(0, 6, STRIDEX);
-    // cl.set_arg_int(0, 7, STRIDEY);
-    // cl.set_arg_clmem(0, 8, filters_clmem);
-    // cl.set_arg_clmem(0, 9, image_clmem);
-    // cl.set_arg_clmem(0, 10, org_output_clmem);
+    cl.set_arg_int(0, 0, WIDTH);
+    cl.set_arg_int(0, 1, HEIGHT);
+    cl.set_arg_int(0, 2, masks(HEIGHT, FILTERHEIGHT, STRIDEY));
+    cl.set_arg_int(0, 3, FILTERWIDTH);
+    cl.set_arg_int(0, 4, FILTERHEIGHT);
+    cl.set_arg_int(0, 5, CHANNELS);
+    cl.set_arg_int(0, 6, STRIDEX);
+    cl.set_arg_int(0, 7, STRIDEY);
+    cl.set_arg_clmem(0, 8, filters_clmem);
+    cl.set_arg_clmem(0, 9, image_clmem);
+    cl.set_arg_clmem(0, 10, org_output_clmem);
 
-    // size_t original_global_size[] = { BATCHSIZE * OUTY, OUTX, FEATURES };
+    size_t original_global_size[] = { BATCHSIZE * OUTY, OUTX, FEATURES };
 
-    // double original_time = 0.0;
-    // for (int i = 0; i < COUNT; i++){
-    //     original_time += cl.time_execution(0, 3,
-    //         original_global_size, NULL);
-    // }
+    double original_time = 0.0;
+    for (int i = 0; i < COUNT; i++){
+        original_time += cl.time_execution(0, 3,
+            original_global_size, NULL);
+    }
 
-    // std::cout << "Original time: " << original_time << "ms" << std::endl;
+    std::cout << "Original time:\t" << original_time << "ms" << std::endl;
 
     // Optimised kernel args
-    cl.set_arg_int(1, 0, BATCHSIZE);
-    cl.set_arg_int(1, 1, WIDTH);
-    cl.set_arg_int(1, 2, HEIGHT);
-    cl.set_arg_clmem(1, 3, image_clmem);
-    cl.set_arg_clmem(1, 4, filters_clmem);
-    cl.set_arg_clmem(1, 5, opt_output_clmem);
+    cl.set_arg_clmem(1, 0, filters_clmem);
+    cl.set_arg_clmem(1, 1, image_clmem);
+    cl.set_arg_clmem(1, 2, opt_output_clmem);
 
     size_t optimised_global_size[] = { BATCHSIZE * OUTY, OUTX, FEATURES };
     size_t optimised_local_size[]  = { 1, 1, FEATURES };
@@ -98,7 +99,25 @@ int main(){
     double optimised_time = 0.0;
     for (int i = 0; i < COUNT; i++){
         optimised_time += cl.time_execution(1, 3,
-            optimised_global_size, optimised_local_size);
+            optimised_global_size, NULL);
+    }
+
+    std::cout << "Optimised time:\t" << optimised_time << "ms" << std::endl;
+
+    // Verify the results
+    clEnqueueReadBuffer(cl.command_queue, org_output_clmem, CL_TRUE, 0,
+        OUTSIZE * sizeof(float), org_output, 0, NULL, NULL);
+    
+    clEnqueueReadBuffer(cl.command_queue, opt_output_clmem, CL_TRUE, 0,
+        OUTSIZE * sizeof(float), opt_output, 0, NULL, NULL);
+    
+    clFinish(cl.command_queue);
+
+    for (int i = 0; i < OUTSIZE; i++){
+        if (org_output[i] != opt_output[i]){
+            std::cout << "Mismatch at index " << i << std::endl;
+            break;
+        }
     }
 
     clReleaseMemObject(image_clmem);
