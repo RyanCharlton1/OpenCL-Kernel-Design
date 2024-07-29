@@ -107,8 +107,10 @@ struct CL{
 
     std::vector<cl_kernel>   kernels;
 
-    CL(const char* path, std::vector<const char*> kernels){
-        init(path, kernels);
+    CL(const char* path, const char* options, 
+        std::vector<const char*> kernels){
+
+        init(path, options, kernels);
     }
 
     ~CL(){
@@ -126,7 +128,8 @@ struct CL{
         delete[] devices;
     }   
 
-    void init(const char* path, std::vector<const char*> kernels){
+    void init(const char* path, const char* options,
+        std::vector<const char*> kernels){
         // Get platform and device info 
         cl_platform_id* platforms = NULL;
         cl_uint         num_platforms;
@@ -190,7 +193,7 @@ struct CL{
         cl_print_err("Progam creation:\t", status);
 
         status = clBuildProgram(
-            program, 1, devices, NULL, NULL, NULL);
+            program, 1, devices, options, NULL, NULL);
         cl_print_err("Program build:\t\t", status);
 
         if (status != CL_SUCCESS){
