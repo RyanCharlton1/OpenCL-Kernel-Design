@@ -35,9 +35,6 @@ void rand_array(float *arr, int size){
 
 int main(){
     char options[128];
-    // std::snprintf(options, 128, "-DFILTERW=%d -DFILTERH=%d -DCHANNELS=%d", 
-    //     FILTERWIDTH, FILTERHEIGHT, CHANNELS);
-
     std::snprintf(options, 128, "-DFILTERW=%d -DFILTERH=%d -DCHANNELS=%d -DBSIZE=%d -DPREVW=%d -DPREVH=%d -DSTRIDEX=%d -DSTRIDEY=%d",
         FILTERWIDTH, FILTERHEIGHT, CHANNELS, BATCHSIZE, WIDTH, HEIGHT, STRIDEX, STRIDEY);
 
@@ -48,8 +45,8 @@ int main(){
     float *opt_output = new float[OUTSIZE];
     float *filters    = new float[FILTERSIZE];
 
-    rand_array(image,    IMAGESIZE);
-    rand_array(filters,  FILTERSIZE);
+    rand_array(image,   IMAGESIZE);
+    rand_array(filters, FILTERSIZE);
 
     cl_mem image_clmem = cl.alloc_buffer(
         "image", IMAGESIZE * sizeof(float), image, 

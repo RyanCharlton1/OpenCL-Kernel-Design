@@ -145,9 +145,9 @@ __constant float* filters,
     return acc;
 }
 
-// Local cache of values for each filter position is not faster
-// than the naive approach becuase of the work group barrier to sync
-// the cache filling
+// Local caching for each feature is only faster for small features sizes
+// due to work group barrier. For larger feature sizes, it's significantly 
+// slower than the original kernel
 
 // Global size: [bsize * filtersy, filtersx, features]
 // Local size:  [1, 1, features]
